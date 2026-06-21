@@ -12,6 +12,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -33,39 +34,55 @@ class AuthRepositoryImpl(
                     dataStore.saveToken(authResponse.accessToken)
                     AuthResult.Success(Unit)
                 } else {
-                    AuthResult.Error("Le serveur n'a pas renvoyé de jeton d'accès.")
+                    AuthResult.Error("Échec : Jeton d'accès manquant dans la réponse.")
                 }
             } else {
                 handleResponseError(response)
             }
         } catch (e: Exception) {
-            AuthResult.Error("Échec de la connexion : ${e.message}")
+            AuthResult.Error("Erreur de connexion : ${e.message}")
         }
     }
 
     override suspend fun register(name: String, email: String, password: String, passwordConfirmation: String): AuthResult<Unit> {
         return try {
             val csrfToken = api.getCsrfToken()
-            val response = api.register(RegisterRequestDto(name, email, password, passwordConfirmation), csrfToken)
+            val response = api.register(RegisterRequestDto(name = name, email = email, password = password, passwordConfirmation = passwordConfirmation), csrfToken)
             if (response.status == HttpStatusCode.OK || response.status == HttpStatusCode.Created) {
                 val authResponse = response.body<AuthResponseDto>()
-                authResponse.accessToken?.let { dataStore.saveToken(it) }
+                if (authResponse.accessToken != null) {
+                    dataStore.saveToken(authResponse.accessToken)
+                }
                 AuthResult.Success(Unit)
             } else {
                 handleResponseError(response)
             }
         } catch (e: Exception) {
-            AuthResult.Error("Échec de l'inscription.")
+            AuthResult.Error("Erreur lors de l'inscription : ${e.message}")
         }
     }
 
     override suspend fun getUser(): AuthResult<User> {
         return try {
             val token = dataStore.authToken.firstOrNull() ?: ""
-            val userDto = api.getUser(token)
-            AuthResult.Success(User(id = userDto.id, name = userDto.name, email = userDto.email, role = userDto.role))
+            val response = api.getUser(token)
+            if (response.status == HttpStatusCode.OK) {
+                // SOLUTION : On extrait explicitement le DTO UserDto de la réponse
+                val userDto = response.body<UserDto>()
+                // On mappe manuellement vers votre modèle de domaine User (package com.drcmind.cleaapp.domain.model)
+                AuthResult.Success(
+                    User(
+                        id = userDto.id,
+                        name = userDto.name, 
+                        email = userDto.email, 
+                        role = userDto.role
+                    )
+                )
+            } else {
+                AuthResult.Error("Impossible de charger le profil.")
+            }
         } catch (e: Exception) {
-            AuthResult.Error("Session expirée.")
+            AuthResult.Error("Session expirée ou erreur réseau.")
         }
     }
 
@@ -87,9 +104,13 @@ class AuthRepositoryImpl(
             val token = dataStore.authToken.firstOrNull() ?: ""
             val csrfToken = api.getCsrfToken()
             val response = api.updateProfile(UpdateProfileRequestDto(name, email), token, csrfToken)
-            if (response.status == HttpStatusCode.OK) AuthResult.Success(Unit) else handleResponseError(response)
+            if (response.status == HttpStatusCode.OK) {
+                AuthResult.Success(Unit)
+            } else {
+                handleResponseError(response)
+            }
         } catch (e: Exception) {
-            AuthResult.Error("Erreur de mise à jour.")
+            AuthResult.Error("Mise à jour impossible.")
         }
     }
 
@@ -98,9 +119,13 @@ class AuthRepositoryImpl(
             val token = dataStore.authToken.firstOrNull() ?: ""
             val csrfToken = api.getCsrfToken()
             val response = api.updatePassword(UpdatePasswordRequestDto(currentPassword, newPassword, newPasswordConfirmation), token, csrfToken)
-            if (response.status == HttpStatusCode.OK) AuthResult.Success(Unit) else handleResponseError(response)
+            if (response.status == HttpStatusCode.OK) {
+                AuthResult.Success(Unit)
+            } else {
+                handleResponseError(response)
+            }
         } catch (e: Exception) {
-            AuthResult.Error("Erreur mot de passe.")
+            AuthResult.Error("Échec du changement de mot de passe.")
         }
     }
 
@@ -110,16 +135,21 @@ class AuthRepositoryImpl(
         val body = try { response.bodyAsText() } catch (e: Exception) { "" }
         return try {
             val json = Json.parseToJsonElement(body).jsonObject
-            val errors = json["errors"]?.jsonObject
+            val errorsObject = json["errors"]?.jsonObject ?: json
             val fieldErrors = mutableMapOf<String, List<String>>()
-            errors?.forEach { (k, v) -> 
-                if (v is kotlinx.serialization.json.JsonArray) {
-                    fieldErrors[k] = v.map { it.jsonPrimitive.content }
-                } else {
-                    fieldErrors[k] = listOf(v.jsonPrimitive.content)
+            
+            errorsObject.forEach { (key, value) ->
+                if (key != "message") {
+                    if (value is kotlinx.serialization.json.JsonArray) {
+                        fieldErrors[key] = value.map { it.jsonPrimitive.content }
+                    } else {
+                        fieldErrors[key] = listOf(value.jsonPrimitive.content)
+                    }
                 }
             }
-            AuthResult.Error(json["message"]?.jsonPrimitive?.content ?: "Données invalides", fieldErrors)
+            
+            val message = json["message"]?.jsonPrimitive?.content ?: "Données invalides"
+            AuthResult.Error(message, fieldErrors)
         } catch (e: Exception) {
             AuthResult.Error("Erreur serveur (${response.status.value})")
         }

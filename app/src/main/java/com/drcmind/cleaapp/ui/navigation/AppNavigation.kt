@@ -15,13 +15,12 @@ import com.drcmind.cleaapp.ui.profile.ProfileScreen
 
 @Composable
 fun AppNavigation(
-    modifier: Modifier = Modifier
+
 ) {
     val backStack = remember { mutableStateListOf<Any>(AppDestination.Splash) }
     
     NavDisplay(
         backStack = backStack,
-        modifier = modifier.fillMaxSize()
     ) { destination ->
         when (destination) {
             is AppDestination.Splash -> NavEntry(destination) {

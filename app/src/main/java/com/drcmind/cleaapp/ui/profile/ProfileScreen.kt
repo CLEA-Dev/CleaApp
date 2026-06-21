@@ -6,8 +6,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +29,6 @@ fun ProfileScreen(
     
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
 
     LaunchedEffect(uiState.user) {
         uiState.user?.let {
@@ -59,7 +56,13 @@ fun ProfileScreen(
                     IconButton(onClick = { viewModel.logout() }) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Déconnexion")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         }
     ) { padding ->
@@ -86,7 +89,7 @@ fun ProfileScreen(
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("Nom") },
+                            label = { Text("Nom complet") },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -101,19 +104,31 @@ fun ProfileScreen(
                             modifier = Modifier.align(Alignment.End).padding(top = 16.dp),
                             enabled = !uiState.isUpdating
                         ) {
-                            Text("Enregistrer")
+                            Text("Mettre à jour")
                         }
                     }
                 }
 
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Sécurité", style = MaterialTheme.typography.titleMedium)
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(top = 8.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    shape = MaterialTheme.shapes.medium
+
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+
+                    ) {
+                        Text(
+                            text = "Sécurité",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedTextField(
                             value = currentPassword,
                             onValueChange = { currentPassword = it },
-                            label = { Text("Ancien mot de passe") },
+                            label = { Text("Mot de passe actuel") },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -126,11 +141,11 @@ fun ProfileScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Button(
-                            onClick = { viewModel.updatePassword(currentPassword, newPassword, confirmPassword) },
+                            onClick = { viewModel.updatePassword(currentPassword, newPassword, newPassword) },
                             modifier = Modifier.align(Alignment.End).padding(top = 16.dp),
                             enabled = !uiState.isUpdating && newPassword.isNotEmpty()
                         ) {
-                            Text("Changer")
+                            Text("Changer le mot de passe")
                         }
                     }
                 }
@@ -138,6 +153,11 @@ fun ProfileScreen(
                 if (uiState.error != null) {
                     Text(uiState.error!!, color = MaterialTheme.colorScheme.error)
                 }
+                
+                if (uiState.updateSuccess) {
+                    Text("Profil mis à jour avec succès !", color = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }

@@ -18,6 +18,10 @@ class AuthApi(private val client: HttpClient) {
 
     private val baseUrl = "https://clea.hercialabs.com"
 
+    /**
+     * Récupère le token CSRF.
+     * Aligné strictement sur le document : GET /sanctum/csrf-token (SANS /api)
+     */
     suspend fun getCsrfToken(): String {
         return try {
             val response = client.get("$baseUrl/sanctum/csrf-token") {
@@ -36,7 +40,9 @@ class AuthApi(private val client: HttpClient) {
     suspend fun login(request: LoginRequestDto, csrfToken: String): HttpResponse {
         return client.post("$baseUrl/api/login") {
             header(HttpHeaders.Accept, "application/json")
-            if (csrfToken.isNotEmpty()) header("X-XSRF-TOKEN", csrfToken)
+            if (csrfToken.isNotEmpty() && !csrfToken.contains("{")) {
+                header("X-XSRF-TOKEN", csrfToken)
+            }
             contentType(ContentType.Application.Json)
             setBody(request)
         }
@@ -45,24 +51,28 @@ class AuthApi(private val client: HttpClient) {
     suspend fun register(request: RegisterRequestDto, csrfToken: String): HttpResponse {
         return client.post("$baseUrl/api/register") {
             header(HttpHeaders.Accept, "application/json")
-            if (csrfToken.isNotEmpty()) header("X-XSRF-TOKEN", csrfToken)
+            if (csrfToken.isNotEmpty() && !csrfToken.contains("{")) {
+                header("X-XSRF-TOKEN", csrfToken)
+            }
             contentType(ContentType.Application.Json)
             setBody(request)
         }
     }
 
-    suspend fun getUser(authToken: String): UserDto {
+    suspend fun getUser(authToken: String): HttpResponse {
         return client.get("$baseUrl/api/user") {
             header(HttpHeaders.Accept, "application/json")
             header(HttpHeaders.Authorization, "Bearer $authToken")
-        }.body()
+        }
     }
 
     suspend fun updateProfile(request: UpdateProfileRequestDto, authToken: String, csrfToken: String): HttpResponse {
         return client.patch("$baseUrl/api/user") {
             header(HttpHeaders.Accept, "application/json")
             header(HttpHeaders.Authorization, "Bearer $authToken")
-            if (csrfToken.isNotEmpty()) header("X-XSRF-TOKEN", csrfToken)
+            if (csrfToken.isNotEmpty() && !csrfToken.contains("{")) {
+                header("X-XSRF-TOKEN", csrfToken)
+            }
             contentType(ContentType.Application.Json)
             setBody(request)
         }
@@ -72,7 +82,9 @@ class AuthApi(private val client: HttpClient) {
         return client.patch("$baseUrl/api/user/password") {
             header(HttpHeaders.Accept, "application/json")
             header(HttpHeaders.Authorization, "Bearer $authToken")
-            if (csrfToken.isNotEmpty()) header("X-XSRF-TOKEN", csrfToken)
+            if (csrfToken.isNotEmpty() && !csrfToken.contains("{")) {
+                header("X-XSRF-TOKEN", csrfToken)
+            }
             contentType(ContentType.Application.Json)
             setBody(request)
         }
@@ -82,7 +94,9 @@ class AuthApi(private val client: HttpClient) {
         return client.post("$baseUrl/api/logout") {
             header(HttpHeaders.Accept, "application/json")
             header(HttpHeaders.Authorization, "Bearer $authToken")
-            if (csrfToken.isNotEmpty()) header("X-XSRF-TOKEN", csrfToken)
+            if (csrfToken.isNotEmpty() && !csrfToken.contains("{")) {
+                header("X-XSRF-TOKEN", csrfToken)
+            }
         }
     }
 }
