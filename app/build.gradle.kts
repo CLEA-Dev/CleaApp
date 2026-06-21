@@ -10,16 +10,12 @@ plugins {
 
 android {
     namespace = "com.drcmind.cleaapp"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.drcmind.cleaapp"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
@@ -66,7 +62,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.material3.adaptive.navigation3)
     implementation(libs.kotlinx.serialization.core)
-
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.material.icons.extended)
 
     implementation(libs.ktor.client.android)
