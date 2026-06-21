@@ -1,4 +1,4 @@
-package com.drcmind.cleaapp.domain.models
+package com.drcmind.cleaapp.domain.model
 
 data class User(
     val id: String? = null,

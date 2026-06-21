@@ -3,8 +3,8 @@ package com.drcmind.cleaapp.data.repository
 import com.drcmind.cleaapp.data.local.datastore.AuthDataStore
 import com.drcmind.cleaapp.data.remote.api.AuthApi
 import com.drcmind.cleaapp.data.remote.dto.*
-import com.drcmind.cleaapp.domain.models.AuthResult
-import com.drcmind.cleaapp.domain.models.User
+import com.drcmind.cleaapp.domain.model.AuthResult
+import com.drcmind.cleaapp.domain.model.User
 import com.drcmind.cleaapp.domain.repository.AuthRepository
 import io.ktor.client.call.body
 import io.ktor.client.statement.HttpResponse
@@ -20,9 +20,7 @@ class AuthRepositoryImpl(
     private val dataStore: AuthDataStore
 ) : AuthRepository {
 
-    override suspend fun getCsrfToken(): String {
-        return api.getCsrfToken()
-    }
+    override suspend fun getCsrfToken(): String = api.getCsrfToken()
 
     override suspend fun login(email: String, password: String): AuthResult<Unit> {
         return try {
@@ -35,13 +33,13 @@ class AuthRepositoryImpl(
                     dataStore.saveToken(authResponse.accessToken)
                     AuthResult.Success(Unit)
                 } else {
-                    AuthResult.Error("Erreur : Jeton d'accès manquant.")
+                    AuthResult.Error("Le serveur n'a pas renvoyé de jeton d'accès.")
                 }
             } else {
                 handleResponseError(response)
             }
         } catch (e: Exception) {
-            AuthResult.Error(e.message ?: "Erreur de connexion.")
+            AuthResult.Error("Échec de la connexion : ${e.message}")
         }
     }
 
@@ -57,7 +55,17 @@ class AuthRepositoryImpl(
                 handleResponseError(response)
             }
         } catch (e: Exception) {
-            AuthResult.Error("Erreur lors de l'inscription.")
+            AuthResult.Error("Échec de l'inscription.")
+        }
+    }
+
+    override suspend fun getUser(): AuthResult<User> {
+        return try {
+            val token = dataStore.authToken.firstOrNull() ?: ""
+            val userDto = api.getUser(token)
+            AuthResult.Success(User(id = userDto.id, name = userDto.name, email = userDto.email, role = userDto.role))
+        } catch (e: Exception) {
+            AuthResult.Error("Session expirée.")
         }
     }
 
@@ -71,16 +79,6 @@ class AuthRepositoryImpl(
         } catch (e: Exception) {
             dataStore.clearToken()
             AuthResult.Success(Unit)
-        }
-    }
-
-    override suspend fun getUser(): AuthResult<User> {
-        return try {
-            val token = dataStore.authToken.firstOrNull() ?: ""
-            val userDto = api.getUser(token)
-            AuthResult.Success(User(id = userDto.id, name = userDto.name, email = userDto.email, role = userDto.role))
-        } catch (e: Exception) {
-            AuthResult.Error("Session expirée.")
         }
     }
 
@@ -114,8 +112,14 @@ class AuthRepositoryImpl(
             val json = Json.parseToJsonElement(body).jsonObject
             val errors = json["errors"]?.jsonObject
             val fieldErrors = mutableMapOf<String, List<String>>()
-            errors?.forEach { (k, v) -> fieldErrors[k] = listOf(v.toString()) }
-            AuthResult.Error(json["message"]?.jsonPrimitive?.content ?: "Erreur", fieldErrors)
+            errors?.forEach { (k, v) -> 
+                if (v is kotlinx.serialization.json.JsonArray) {
+                    fieldErrors[k] = v.map { it.jsonPrimitive.content }
+                } else {
+                    fieldErrors[k] = listOf(v.jsonPrimitive.content)
+                }
+            }
+            AuthResult.Error(json["message"]?.jsonPrimitive?.content ?: "Données invalides", fieldErrors)
         } catch (e: Exception) {
             AuthResult.Error("Erreur serveur (${response.status.value})")
         }

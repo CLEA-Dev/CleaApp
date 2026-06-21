@@ -1,4 +1,4 @@
-package com.drcmind.cleaapp.domain.models
+package com.drcmind.cleaapp.domain.model
 
 sealed interface AuthResult<out T> {
     data class Success<T>(val data: T) : AuthResult<T>
