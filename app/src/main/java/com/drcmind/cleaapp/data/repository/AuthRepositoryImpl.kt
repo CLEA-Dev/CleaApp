@@ -34,7 +34,7 @@ class AuthRepositoryImpl(
                     dataStore.saveToken(authResponse.accessToken)
                     AuthResult.Success(Unit)
                 } else {
-                    AuthResult.Error("Échec : Jeton d'accès manquant dans la réponse.")
+                    AuthResult.Error("Échec : Jeton d'accès manquant.")
                 }
             } else {
                 handleResponseError(response)
@@ -58,7 +58,7 @@ class AuthRepositoryImpl(
                 handleResponseError(response)
             }
         } catch (e: Exception) {
-            AuthResult.Error("Erreur lors de l'inscription : ${e.message}")
+            AuthResult.Error("Erreur lors de l'inscription.")
         }
     }
 
@@ -67,9 +67,9 @@ class AuthRepositoryImpl(
             val token = dataStore.authToken.firstOrNull() ?: ""
             val response = api.getUser(token)
             if (response.status == HttpStatusCode.OK) {
-                // SOLUTION : On extrait explicitement le DTO UserDto de la réponse
+                // Extraction du DTO depuis la réponse Ktor
                 val userDto = response.body<UserDto>()
-                // On mappe manuellement vers votre modèle de domaine User (package com.drcmind.cleaapp.domain.model)
+                // Mapping vers votre modèle de domaine com.drcmind.cleaapp.domain.model.User
                 AuthResult.Success(
                     User(
                         id = userDto.id,
@@ -140,10 +140,9 @@ class AuthRepositoryImpl(
             
             errorsObject.forEach { (key, value) ->
                 if (key != "message") {
-                    if (value is kotlinx.serialization.json.JsonArray) {
-                        fieldErrors[key] = value.map { it.jsonPrimitive.content }
-                    } else {
-                        fieldErrors[key] = listOf(value.jsonPrimitive.content)
+                    when (value) {
+                        is JsonArray -> fieldErrors[key] = value.map { it.jsonPrimitive.content }
+                        else -> fieldErrors[key] = listOf(value.jsonPrimitive.content)
                     }
                 }
             }
