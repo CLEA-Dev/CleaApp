@@ -14,6 +14,10 @@ class LoginViewModel(
     private val repository: AuthRepository
 ) : ViewModel() {
 
+    companion object {
+        private val EMAIL_REGEX = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    }
+
     private val _state = MutableStateFlow(LoginState())
     val state: StateFlow<LoginState> = _state.asStateFlow()
 
@@ -29,6 +33,10 @@ class LoginViewModel(
         val currentState = _state.value
         if (currentState.email.isBlank() || currentState.password.isBlank()) {
             _state.update { it.copy(globalError = "Veuillez remplir tous les champs") }
+            return
+        }
+        if (!EMAIL_REGEX.matches(currentState.email)) {
+            _state.update { it.copy(fieldErrors = it.fieldErrors + ("email" to listOf("Adresse email invalide"))) }
             return
         }
 

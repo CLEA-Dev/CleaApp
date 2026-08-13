@@ -1,5 +1,6 @@
 package com.drcmind.cleaapp.data.remote.api
 
+import com.drcmind.cleaapp.data.remote.ApiConfig
 import com.drcmind.cleaapp.data.remote.dto.*
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -16,7 +17,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class AuthApi(private val client: HttpClient) {
 
-    private val baseUrl = "https://clea.hercialabs.com"
+    private val baseUrl = ApiConfig.BASE_URL
 
     /**
      * Récupère le token CSRF.

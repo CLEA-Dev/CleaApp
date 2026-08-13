@@ -2,6 +2,7 @@ package com.drcmind.cleaapp.data.local.room.dao
 
 import androidx.room.*
 import com.drcmind.cleaapp.data.local.room.entity.*
+import com.drcmind.cleaapp.data.model.CycleStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,8 +27,19 @@ interface MenstrualDao {
     @Query("DELETE FROM cycles WHERE id = :id")
     suspend fun deleteCycle(id: String)
 
-    @Query("DELETE FROM cycles")
-    suspend fun deleteAllCycles()
+    @Query("SELECT * FROM cycles WHERE status = :status ORDER BY startDate DESC LIMIT 1")
+    suspend fun getActiveCycle(status: CycleStatus): CycleEntity?
+
+    @Query("SELECT * FROM cycles WHERE status = :status ORDER BY startDate DESC")
+    suspend fun getCompletedCycles(status: CycleStatus): List<CycleEntity>
+
+    @Transaction
+    @Query("""
+        SELECT * FROM cycle_days 
+        WHERE cycleId = (SELECT id FROM cycles WHERE status = :status ORDER BY startDate DESC LIMIT 1)
+        ORDER BY date ASC
+    """)
+    suspend fun getActiveCycleDays(status: CycleStatus): List<DayEntity>
 
     // --- Days ---
     @Query("SELECT * FROM cycle_days WHERE cycleId = :cycleId ORDER BY date ASC")
@@ -52,11 +64,9 @@ interface MenstrualDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDaySymptomCrossRef(crossRef: List<DaySymptomCrossRef>)
 
-    @Transaction
     @Query("""
         SELECT * FROM symptoms 
-        INNER JOIN day_symptoms ON symptoms.id = day_symptoms.symptomId 
-        WHERE day_symptoms.dayId = :dayId
+        WHERE id IN (SELECT symptomId FROM day_symptoms WHERE dayId = :dayId)
     """)
     suspend fun getSymptomsForDay(dayId: String): List<SymptomEntity>
 }

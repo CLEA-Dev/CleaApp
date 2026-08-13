@@ -14,6 +14,8 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 import android.util.Log
+import com.drcmind.cleaapp.BuildConfig
+import com.drcmind.cleaapp.data.remote.ApiConfig
 
 val networkModule = module {
     single {
@@ -34,7 +36,7 @@ val networkModule = module {
                         Log.d("Ktor", message)
                     }
                 }
-                level = LogLevel.ALL
+                level = if (BuildConfig.DEBUG) LogLevel.ALL else LogLevel.NONE
             }
             
             install(HttpCookies) {
@@ -42,7 +44,7 @@ val networkModule = module {
             }
             
             defaultRequest {
-                url("https://clea.hercialabs.com/")
+                url("${ApiConfig.BASE_URL}/")
                 header("Accept", "application/json")
                 header("Content-Type", "application/json")
             }

@@ -1,7 +1,9 @@
 package com.drcmind.cleaapp.ui.profile
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -10,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
@@ -29,6 +33,7 @@ fun ProfileScreen(
     
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
+    var newPasswordConfirmation by remember { mutableStateOf("") }
 
     LaunchedEffect(uiState.user) {
         uiState.user?.let {
@@ -81,7 +86,44 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
+                uiState.user?.let { user ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = user.name.trim().firstOrNull()?.uppercase() ?: "?",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = user.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = user.email,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Informations", style = MaterialTheme.typography.titleMedium)
@@ -140,10 +182,25 @@ fun ProfileScreen(
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = newPasswordConfirmation,
+                            onValueChange = { newPasswordConfirmation = it },
+                            label = { Text("Confirmer le nouveau mot de passe") },
+                            isError = newPasswordConfirmation.isNotEmpty() && newPassword != newPasswordConfirmation,
+                            supportingText = if (newPasswordConfirmation.isNotEmpty() && newPassword != newPasswordConfirmation) {
+                                { Text("Les mots de passe ne correspondent pas") }
+                            } else {
+                                null
+                            },
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        val passwordsMatch = newPassword == newPasswordConfirmation
                         Button(
-                            onClick = { viewModel.updatePassword(currentPassword, newPassword, newPassword) },
+                            onClick = { viewModel.updatePassword(currentPassword, newPassword, newPasswordConfirmation) },
                             modifier = Modifier.align(Alignment.End).padding(top = 16.dp),
-                            enabled = !uiState.isUpdating && newPassword.isNotEmpty()
+                            enabled = !uiState.isUpdating && currentPassword.isNotEmpty() && newPassword.isNotEmpty() && passwordsMatch
                         ) {
                             Text("Changer le mot de passe")
                         }

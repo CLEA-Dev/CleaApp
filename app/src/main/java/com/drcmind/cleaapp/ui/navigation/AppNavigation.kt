@@ -1,23 +1,20 @@
 package com.drcmind.cleaapp.ui.navigation
 
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.runtime.NavEntry
 import com.drcmind.cleaapp.ui.auth.login.LoginScreen
 import com.drcmind.cleaapp.ui.auth.login.SignInScreen
+import com.drcmind.cleaapp.ui.auth.onboarding.OnboardingScreen
 import com.drcmind.cleaapp.ui.auth.splash.SplashScreen
-import com.drcmind.cleaapp.ui.home.HomeScreen
+import com.drcmind.cleaapp.ui.home.MainScreen
 import com.drcmind.cleaapp.ui.profile.ProfileScreen
 
 @Composable
-fun AppNavigation(
-
-) {
-    val backStack = remember { mutableStateListOf<Any>(AppDestination.Splash) }
+fun AppNavigation() {
+    val backStack = remember { mutableStateListOf<AppDestination>(AppDestination.Splash) }
     
     NavDisplay(
         backStack = backStack,
@@ -28,6 +25,14 @@ fun AppNavigation(
                     onNavigate = { dest ->
                         backStack.clear()
                         backStack.add(dest)
+                    }
+                )
+            }
+            is AppDestination.Onboarding -> NavEntry(destination) {
+                OnboardingScreen(
+                    onFinish = {
+                        backStack.clear()
+                        backStack.add(AppDestination.Login)
                     }
                 )
             }
@@ -50,7 +55,7 @@ fun AppNavigation(
                 )
             }
             is AppDestination.Home -> NavEntry(destination) {
-                HomeScreen(
+                MainScreen(
                     onNavigateToProfile = {
                         backStack.add(AppDestination.Profile)
                     }
@@ -67,7 +72,6 @@ fun AppNavigation(
                     }
                 )
             }
-            else -> NavEntry(destination) { }
         }
     }
 }

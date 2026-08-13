@@ -14,6 +14,10 @@ class SignInViewModel(
     private val repository: AuthRepository
 ) : ViewModel() {
 
+    companion object {
+        private val EMAIL_REGEX = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    }
+
     private val _state = MutableStateFlow(SignInState())
     val state: StateFlow<SignInState> = _state.asStateFlow()
 
@@ -41,6 +45,11 @@ class SignInViewModel(
             return
         }
         
+        if (!EMAIL_REGEX.matches(currentState.email)) {
+            _state.update { it.copy(fieldErrors = it.fieldErrors + ("email" to listOf("Adresse email invalide"))) }
+            return
+        }
+
         if (currentState.password != currentState.passwordConfirmation) {
             _state.update { it.copy(globalError = "Les mots de passe ne correspondent pas") }
             return

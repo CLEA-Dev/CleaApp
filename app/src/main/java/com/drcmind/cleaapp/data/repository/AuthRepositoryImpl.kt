@@ -32,6 +32,7 @@ class AuthRepositoryImpl(
                 val authResponse = response.body<AuthResponseDto>()
                 if (authResponse.accessToken != null) {
                     dataStore.saveToken(authResponse.accessToken)
+                    authResponse.user?.let { dataStore.saveUser(it.name, it.email) }
                     AuthResult.Success(Unit)
                 } else {
                     AuthResult.Error("Échec : Jeton d'accès manquant.")
@@ -53,6 +54,7 @@ class AuthRepositoryImpl(
                 if (authResponse.accessToken != null) {
                     dataStore.saveToken(authResponse.accessToken)
                 }
+                dataStore.saveUser(name, email)
                 AuthResult.Success(Unit)
             } else {
                 handleResponseError(response)
@@ -63,26 +65,19 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun getUser(): AuthResult<User> {
+        val cached = cachedUser()
         return try {
             val token = dataStore.authToken.firstOrNull() ?: ""
             val response = api.getUser(token)
             if (response.status == HttpStatusCode.OK) {
-                // Extraction du DTO depuis la réponse Ktor
                 val userDto = response.body<UserDto>()
-                // Mapping vers votre modèle de domaine com.drcmind.cleaapp.domain.model.User
-                AuthResult.Success(
-                    User(
-                        id = userDto.id,
-                        name = userDto.name, 
-                        email = userDto.email, 
-                        role = userDto.role
-                    )
-                )
+                dataStore.saveUser(userDto.name, userDto.email)
+                AuthResult.Success(userDto.toDomain())
             } else {
-                AuthResult.Error("Impossible de charger le profil.")
+                cached?.let { AuthResult.Success(it) } ?: AuthResult.Error("Impossible de charger le profil.")
             }
         } catch (e: Exception) {
-            AuthResult.Error("Session expirée ou erreur réseau.")
+            cached?.let { AuthResult.Success(it) } ?: AuthResult.Error("Session expirée ou erreur réseau.")
         }
     }
 
@@ -92,9 +87,11 @@ class AuthRepositoryImpl(
             val csrfToken = api.getCsrfToken()
             api.logout(token, csrfToken)
             dataStore.clearToken()
+            dataStore.clearUser()
             AuthResult.Success(Unit)
         } catch (e: Exception) {
             dataStore.clearToken()
+            dataStore.clearUser()
             AuthResult.Success(Unit)
         }
     }
@@ -105,6 +102,7 @@ class AuthRepositoryImpl(
             val csrfToken = api.getCsrfToken()
             val response = api.updateProfile(UpdateProfileRequestDto(name, email), token, csrfToken)
             if (response.status == HttpStatusCode.OK) {
+                dataStore.saveUser(name, email)
                 AuthResult.Success(Unit)
             } else {
                 handleResponseError(response)
@@ -130,6 +128,23 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun isLoggedIn(): Boolean = dataStore.authToken.firstOrNull() != null
+
+    private suspend fun cachedUser(): User? {
+        val name = dataStore.userName.firstOrNull()
+        val email = dataStore.userEmail.firstOrNull()
+        return if (!name.isNullOrBlank() && !email.isNullOrBlank()) {
+            User(name = name, email = email)
+        } else {
+            null
+        }
+    }
+
+    private fun UserDto.toDomain(): User = User(
+        id = id,
+        name = name,
+        email = email,
+        role = role
+    )
 
     private suspend fun handleResponseError(response: HttpResponse): AuthResult.Error {
         val body = try { response.bodyAsText() } catch (e: Exception) { "" }

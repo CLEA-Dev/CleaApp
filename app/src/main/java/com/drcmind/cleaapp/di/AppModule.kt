@@ -12,6 +12,7 @@ import com.drcmind.cleaapp.domain.repository.MenstrualRepository
 import com.drcmind.cleaapp.ui.auth.login.LoginViewModel
 import com.drcmind.cleaapp.ui.auth.login.SignInViewModel
 import com.drcmind.cleaapp.ui.auth.splash.SplashViewModel
+import com.drcmind.cleaapp.ui.menstrual.MenstrualViewModel
 import com.drcmind.cleaapp.ui.profile.ProfileViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModelOf
@@ -25,7 +26,7 @@ val appModule = module {
             androidContext(),
             CleaDatabase::class.java,
             "clea_db"
-        ).fallbackToDestructiveMigration().build()
+        ).build()
     }
     single { get<CleaDatabase>().menstrualDao }
 
@@ -42,4 +43,5 @@ val appModule = module {
     viewModelOf(::LoginViewModel)
     viewModelOf(::SignInViewModel)
     viewModelOf(::ProfileViewModel)
+    viewModelOf(::MenstrualViewModel)
 }
